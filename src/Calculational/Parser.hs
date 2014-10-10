@@ -119,7 +119,6 @@ name = accept NAME
 -- | @expr@ parses an expression
 expr :: TParser QState ExpQ
 expr = dolarExpr
-     . infixExpr expr
      . boolExpr
      . boolImpExpr
      . boolConsExpr
@@ -131,6 +130,7 @@ expr = dolarExpr
      . countExpr
      . maxminExpr
      . aritExpr
+     . infixExpr expr
      . unionInterExpr
      . termExpr
      . powExpr
