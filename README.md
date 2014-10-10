@@ -80,7 +80,7 @@ quantifier:
 
 ```haskell 
 ghci> [calc| (+x <- [-100..100] : 0 <= x < 10 : x^2) |]
-45 
+285 
 ``` 
 
 In this example, variable `x` is assigned each value in the set
@@ -92,7 +92,7 @@ expression:
 
 ```haskell
 ghci> sum [ x^2 | x <- [-100..100], 0 <= x && x < 10]
-45
+285
 ```
  
 Consider another example. The following definition:
@@ -162,7 +162,7 @@ ghci> [calc| (+ x<-[0..2],y<-[x+1 .. 3] : : x+y) |]
 Also, tuples and some patterns for the left generator part can be used:
 
 ```haskell
-ghci> [calc| (+ (x,y) <- zip [0..9] [1..10] : even x /\ even y: x+y) |]
+ghci> [calc| (+ (x,y) <- zip [0..9] [1..10] : : x+y) |]
 100
 ```
 
@@ -365,6 +365,7 @@ fromList []
 
 ```haskell
 ghci> [calc| (union s <- {{1},{2,3},{4}} : : Data.Set.map (\x -> x^2) s) |]
+fromList [1,4,9,16]
 ```
 
 A wrapper data type `Universe` gives an upper bound to ordered monoids
@@ -381,7 +382,7 @@ ghci> [calc| (intersection s <- {{1,2},{2,3},{2}} : False : Container s) |]
 Universe
 
 ghci> [calc| (intersection s <- {{1,2},{2,3},{2}} : : Container s) |]
-fromList [2]
+Container {getContainer = fromList [2]}
 ```
 
 ## Lists
