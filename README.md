@@ -79,19 +79,19 @@ For example, consider the operational interpretation of the following
 quantifier:
 
 ```haskell 
-ghci> [calc| (+x <- [-100..100] : 0 <= x < 10 : x^2) |]
+ghci> [calc| (+x <- [-100 .. 100] : 0 <= x < 10 : x^2) |]
 285 
 ``` 
 
 In this example, variable `x` is assigned each value in the set
-`[-100..100]`. The evaluation corresponds to summing up the square
+`[-100 .. 100]`. The evaluation corresponds to summing up the square
 `x^2` for those values of `x` satisfying `0 <= x < 10`.
 
 The expression in this example is equivalent to the following Haskell
 expression:
 
 ```haskell
-ghci> sum [ x^2 | x <- [-100..100], 0 <= x && x < 10]
+ghci> sum [ x^2 | x <- [-100 .. 100], 0 <= x && x < 10]
 285
 ```
  
@@ -102,7 +102,7 @@ ghci> let sorted xs = [calc| (/\ (x,y) <- zip xs (tail xs) : : x <= y) |]
 ```
 tests if a list is sorted in ascending order. 
 ```haskell
-ghci> sorted ['a'..'z']
+ghci> sorted ['a' .. 'z']
 True
 ```
 
@@ -145,7 +145,7 @@ In a quantifier, there can be more than one generator and they are
 separated by commas.
 
 ```haskell
-ghci> [calc| (+ x<-[0..5],y<-[0..5] : 0 <= x < y <= 3 : x+y) |]
+ghci> [calc| (+ x<-[0 .. 5],y<-[0 .. 5] : 0 <= x < y <= 3 : x+y) |]
 18
 ```
 In this example for each `x` value between `0` and `5`, `y` 
@@ -155,14 +155,14 @@ The bounded variables can be used on later expressions, including other
 generators:
 
 ```haskell
-ghci> [calc| (+ x<-[0..2],y<-[x+1 .. 3] : : x+y) |]
+ghci> [calc| (+ x<-[0 .. 2],y<-[x+1 .. 3] : : x+y) |]
 18
 ```
 
 Also, tuples and some patterns for the left generator part can be used:
 
 ```haskell
-ghci> [calc| (+ (x,y) <- zip [0..9] [1..10] : : x+y) |]
+ghci> [calc| (+ (x,y) <- zip [0 .. 9] [1 .. 10] : : x+y) |]
 100
 ```
 
@@ -195,9 +195,9 @@ to have identities. In this purpose, constants `minbound` and
 is returned in the case of a quantifier with empty range.
 
 ```haskell
-ghci> [calc| (max x <- [-10..10] | False : x^2 ) |] :: Int
+ghci> [calc| (max x <- [-10 .. 10] | False : x^2 ) |] :: Int
 -9223372036854775808
-ghci> [calc| (max x <- [-10..10] | : x^2 ) |] :: Int
+ghci> [calc| (max x <- [-10 .. 10] | : x^2 ) |] :: Int
 100
 ```
 
@@ -213,16 +213,16 @@ data Infty a = NegInfty
 ```
 
 ```haskell
-ghci> [calc| (max x <- [-10..10] | False : Value(x^2) ) |] 
+ghci> [calc| (max x <- [-10 .. 10] | False : Value(x^2) ) |] 
 NegInfty
 
-ghci> [calc| (min x <- [-10..10] | False : Value(x^2) ) |] 
+ghci> [calc| (min x <- [-10 .. 10] | False : Value(x^2) ) |] 
 PosInfty
 
-ghci> [calc| (max x <- [-10..10] | : Value(x^2) ) |] 
+ghci> [calc| (max x <- [-10 .. 10] | : Value(x^2) ) |] 
 Value {getValue = 100}
 
-ghci> [calc| (min x <- [-10..10] | : Value(x^2) ) |] 
+ghci> [calc| (min x <- [-10 .. 10] | : Value(x^2) ) |] 
 Value {getValue = 0}
 ``` 
 
@@ -241,6 +241,8 @@ ghci> [calc| { 1 .. 3 } |]
 fromList [1,2,3]
 ```
 
+The spaces around the `..` are necessary in some cases to avoid the parser fails.
+
 ### Set comprehensions
 
 With a syntax similar to that of quantifiers, a set comprehension has the 
@@ -253,7 +255,7 @@ same parts but enclosed with braces and without operator:
 Some set comprehension examples:
 
 ```haskell
-ghci> [calc| { x <- [-10..10] | 0 <= x < 4 : x^2 } |]
+ghci> [calc| { x <- [-10 .. 10] | 0 <= x < 4 : x^2 } |]
 fromList [0,1,4,9]
 
 ghci> let s = [-100 .. 100]
@@ -273,7 +275,7 @@ If there is only one generator, and the body is ommited, it is equivalent
 to the left part of the generator.
 
 ```haskell
-ghci> [calc| { x <- [0..10] : x^2 < 6 } |]
+ghci> [calc| { x <- [0 .. 10] : x^2 < 6 } |]
 fromList [0,1,2]
 ```
 
@@ -283,9 +285,9 @@ The `member` function is used to test if an element is a member of a
 set.
 
 ```haskell
-ghci> [calc| 0 ∊ { x <- [0..10] : x^2 < 6 } |]
+ghci> [calc| 0 ∊ { x <- [0 .. 10] : x^2 < 6 } |]
 True
-ghci> [calc| 0 `member` { x <- [0..10] : x^2 < 6 } |]
+ghci> [calc| 0 `member` { x <- [0 .. 10] : x^2 < 6 } |]
 True
 ```
 
@@ -390,7 +392,7 @@ Container {getContainer = fromList [2]}
 List comprehension is defined similar to set comprehensions:
 
 ```haskell
-ghci> [calc| [ x <- [0..10] : 1 <= x <= 3 /\ even x : x^2 ] |]
+ghci> [calc| [ x <- [0 .. 10] : 1 <= x <= 3 /\ even x : x^2 ] |]
 [4]
 ```
 
@@ -399,9 +401,9 @@ ghci> [calc| [ x <- [0..10] : 1 <= x <= 3 /\ even x : x^2 ] |]
 The prepend operator `<|` prepends an element to a list.
 
 ```haskell
-ghci> [calc| 1 <| [ x <- [0..5] : 2 <= x <= 3 : x^2 ] |]
+ghci> [calc| 1 <| [ x <- [0 .. 5] : 2 <= x <= 3 : x^2 ] |]
 [1,4,9]
-ghci> [calc| 1 ⊲ [ x <- [0..5] : 2 <= x <= 3 : x^2 ] |]
+ghci> [calc| 1 ⊲ [ x <- [0 .. 5] : 2 <= x <= 3 : x^2 ] |]
 [1,4,9]
 ```
 
@@ -409,9 +411,9 @@ The append operator `|>` appends an element to a list.
 
 
 ```haskell
-ghci> [calc| [ x <- [0..5] : 1 <= x <= 2 : x^2 ]  |> 9 |]
+ghci> [calc| [ x <- [0 .. 5] : 1 <= x <= 2 : x^2 ]  |> 9 |]
 [1,4,9]
-ghci> [calc| [ x <- [0..5] : 1 <= x <= 2 : x^2 ]  ⊳ 9 |]
+ghci> [calc| [ x <- [0 .. 5] : 1 <= x <= 2 : x^2 ]  ⊳ 9 |]
 [1,4,9]
 ```
 

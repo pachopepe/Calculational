@@ -72,7 +72,7 @@ acceptTk :: Token -> TParser a ()
 acceptTk tt = sat (== tt) >> return ()  
             <?> "Assert fail: expected '"++ show tt ++ "'"
 
--- | @'sat' p@ reads a new token and check if satisfies @p@
+-- | @'getCat' cat@ reads a new token if it is of category @cat@
 getCat :: TkCategory -> TParser a String
 getCat cat = tokenPrim showTok
                   advance
