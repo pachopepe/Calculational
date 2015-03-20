@@ -46,7 +46,7 @@ The following operators are defined:
 
  Operator        | Description 
  :-------------: | ----------- 
- `~` &nbsp; `¬`  | Negation
+ `~` &nbsp; $\neg$  | Negation
  `/\` &nbsp;`⋀`  | Conjunction
  `\/`  &nbsp;`⋁` | Disjunction
  `==>` &nbsp;`⟹` | Implication
