@@ -34,8 +34,8 @@ library
   exposed-modules:    Calculational.MonoidExt
                       Calculational.Definitions
                       Calculational
-  other-modules:      Calculational.Parser
-                      Calculational.QuasiQuoter
+  other-modules:      Calculational.QuasiQuoter
+                      Calculational.Parser
                       Calculational.Lexer
   hs-source-dirs:     src
   extensions:         DoAndIfThenElse

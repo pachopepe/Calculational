@@ -119,6 +119,7 @@ name = accept NAME
 -- | @expr@ parses an expression
 expr :: TParser QState ExpQ
 expr = dolarExpr
+     . extBinOpExpr 
      . boolExpr
      . boolImpExpr
      . boolConsExpr
@@ -261,10 +262,24 @@ powExpr = parseLS [(["^"],[| (^) |]),(["**"],[| (**) |])]
 compExpr :: TParser QState ExpQ -> TParser QState ExpQ
 compExpr = parseR ["."] [| (.) |]
 
+extBinOpExpr :: TParser QState ExpQ -> TParser QState ExpQ
+extBinOpExpr = (`chainl1` symbolOp)
+             where symbolOp = do 
+                           sop <- parseSatCat SYMBOL notDelim 
+                           let op' = theOp sop
+                           retOp op'
+                   notDelim x = Prelude.and $ map (/= x) [":","|","|:","::","$",",",".."]
+                   theOp s =  do mn <- lookupValueName s
+                                 case mn of
+                                      Nothing -> fail ("undefined operator '"++s++"'")
+                                      Just name -> varE name
+                                         
+
 -- | @appExpr@ parses applicative expressions
 appExpr :: TParser QState ExpQ -> TParser QState ExpQ
 appExpr = (`chainl1` (notFollowedBy
-                      (choice . map symbol $ ["-","#","\\","~","¬"])
+                      -- (choice . map symbol $ ["-","#","\\","~","¬"])
+                      (getCat SYMBOL)
                             *> return (\e1 e2 -> [| $e1 $e2 |])))
 
 -- | parses a @factor@ 
@@ -523,7 +538,7 @@ num  =   do{ ds <- getCat NUMBER;
 -- | @parseSatCat@ parses a specified category if satisfied @p@
 parseSatCat :: TkCategory -> (String -> Bool) -> TParser QState String
 parseSatCat cat p = do
-  str <- lookAhead (getCat NAME)
+  str <- lookAhead (getCat cat)
   guard (p $ str)
   skip
   return str
