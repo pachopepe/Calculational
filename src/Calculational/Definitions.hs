@@ -39,15 +39,25 @@ class CollectionClass m a where
     type DC m a :: Constraint
     size :: m a -> Int
     member :: DC m a => a -> m a -> Bool
+    notMember  :: DC m a => a -> m a -> Bool
+    notMember x s = not (x `member` s)
     union :: DC m a => m a -> m a -> m a
     intersection :: DC m a => m a -> m a -> m a
     difference :: DC m a => m a -> m a -> m a
     subset :: DC m a => m a -> m a -> Bool
+    notSubset :: DC m a => m a -> m a -> Bool
+    notSubset u s = not (u `subset` s)
     subsetEq :: DC m a => m a -> m a -> Bool
+    notSubsetEq :: DC m a => m a -> m a -> Bool
+    notSubsetEq u s = not (u `subsetEq` s)
     superSet :: DC m a => m a -> m a -> Bool
     superSet = flip subset
+    notSuperSet :: DC m a => m a -> m a -> Bool
+    notSuperSet u s = not (u `superSet` s)
     superSetEq :: DC m a => m a -> m a -> Bool
     superSetEq = flip subsetEq
+    notSuperSetEq :: DC m a => m a -> m a -> Bool
+    notSuperSetEq u s = not (u `superSetEq` s)
 
 instance CollectionClass [] a where
       type DC [] a = Eq a

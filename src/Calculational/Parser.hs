@@ -214,7 +214,13 @@ relSymbols = [ (["/="],[| (/=) |])
              , (["⊆"],[| subsetEq |])
              , (["⊃"],[| superSet |])
              , (["⊇"],[| superSetEq |])
+             , (["⊄"],[| notSubset |])
+             , (["⊈"],[| notSubsetEq |])
+             , (["⊅"],[| notSuperSet |])
+             , (["⊉"],[| notSuperSetEq |])
              , (["∊"],[| member |])
+             , (["∈"],[| member |])
+             , (["∉"],[| notMember |])
              ]
 
 -- | @termConcat@ parses concatenation of expressions
