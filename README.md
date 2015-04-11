@@ -366,7 +366,7 @@ fromList []
 ```
 
 ```haskell
-ghci> [calc| (union s <- {{1},{2,3},{4}} : : Data.Set.map (\x -> x^2) s) |]
+ghci> [calc| (union s <- {{1},{2,3},{4}} : : { x <- s : : x^2}) |]
 fromList [1,4,9,16]
 ```
 
