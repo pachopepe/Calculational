@@ -11,21 +11,21 @@ data Gender = Male
             deriving (Show,Eq,Ord,Read)
 
 -- | Person identifier type
-type IdPerson = Integer
+type PersonId = Integer
 
 -- | Employee identifier type
-type IdEmployee = Integer
+type EmployeeId = Integer
 
 -- | Person datatype
-data Person = Person { idPerson :: IdPerson,
+data Person = Person { personId :: PersonId,
                        name :: String,
                        age :: Integer,
                        gender :: Gender }
               deriving (Show,Eq,Ord)
 
 -- | Employee datatype
-data Employee = Employee { idEmployee :: IdEmployee,
-                           idPersonE :: IdPerson,
+data Employee = Employee { employeeId :: EmployeeId,
+                           personIdE :: PersonId,
                            salary :: Integer }
               deriving (Show,Eq,Ord)
 
@@ -62,20 +62,27 @@ averageSalary = average [calc| (avg e <- employees : : salary e) |]
 -- | Set of person names with salary higher than 'mn'
 salaryHigher :: Integer -> Set String
 salaryHigher mn = [calc| { e <- employees, p <- persons : 
-                           idPerson p == idEmployee e /\ salary e > mn : 
+                           personId p == employeeId e /\ salary e > mn : 
                            name p } |]
+
+-- | Set of person names and salary with salary between a and b
+salaryBetween :: Integer -> Integer -> Set (String,Integer)
+salaryBetween a b = [calc|
+  { e <- employees, p <- persons |
+    personId p == personIdE e /\ a <= salary e <= b :
+    (name p,salary e) } |]
 
 -- | List of persons with salary higher than mn
 salaryHigher' :: Integer -> [Person]
 salaryHigher' mn = [calc| [ e <- employees, p <- persons :
-                            salary e >= mn /\ idEmployee e == idPerson p :
+                            salary e >= mn /\ personIdE e == personId p :
                             p ] |] 
 
 -- | List of (person,employee) pairs with age between @mn@ and @mx@
 employeesBetweenAge :: Integer -> Integer -> Set (Person,Employee)
 employeesBetweenAge mn mx =
   [calc| { p <- persons, e <- employees : 
-           mn <= age p <= mx /\ idPerson p == idPersonE e :
+           mn <= age p <= mx /\ personId p == personIdE e :
            (p,e) } |]
 
 -- | Average salary of persons with age between mn and mx  
@@ -86,6 +93,17 @@ averageSalary' mn mx = average [calc| (avg (_,e) <- es : : salary e ) |]
 -- | salary frequency of employees 
 salaryFrequence :: MultiSet Integer
 salaryFrequence = [calc| {| e <- employees : : salary e |} |]
+
+salaryFrequence' :: Set (Integer,Integer)
+salaryFrequence' = [calc| { e <- employees | : (salary e,(# e' <- employees |: salary e' == salary e)) } |]
+
+maxSalaryByAge :: Set (Integer,Infty Integer)
+maxSalaryByAge = [calc| { p <- persons | : (age p,(max e <- employees | personIdE e == personId p : Value (salary e))) } |]
+
+maxSalaryByAge' :: Set (Integer,Infty Integer)
+maxSalaryByAge' = [calc| { p <- persons, e <- employees | : (age p,(max x<-[1] | personIdE e == personId p : Value (salary e))) } |]
+
+
 
 -- | age frequency of persons
 ageFrequency :: MultiSet Integer

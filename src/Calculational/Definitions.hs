@@ -58,6 +58,7 @@ class CollectionClass m a where
     superSetEq = flip subsetEq
     notSuperSetEq :: DC m a => m a -> m a -> Bool
     notSuperSetEq u s = not (u `superSetEq` s)
+    emptyCollection :: DC m a => m a 
 
 instance CollectionClass [] a where
       type DC [] a = Eq a
@@ -72,6 +73,7 @@ instance CollectionClass [] a where
       subsetEq (x:xs) (y:ys) = if x == y
                                then xs `subsetEq` ys
                                else (x:xs) `subsetEq` ys
+      emptyCollection = []
 
 instance CollectionClass Set.Set a where
       type DC Set.Set a = Ord a
@@ -82,6 +84,7 @@ instance CollectionClass Set.Set a where
       difference = (Set.\\)
       subsetEq = Set.isSubsetOf
       subset = Set.isProperSubsetOf
+      emptyCollection = Set.empty
 
 
 instance CollectionClass MultiSet.MultiSet a where
@@ -93,4 +96,5 @@ instance CollectionClass MultiSet.MultiSet a where
       difference = (MultiSet.\\)
       subset = MultiSet.isProperSubsetOf
       subsetEq = MultiSet.isSubsetOf
+      emptyCollection = MultiSet.empty
 

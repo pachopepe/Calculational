@@ -130,10 +130,11 @@ expr = dolarExpr
      . prependExpr
      . countExpr
      . maxminExpr
-     . aritExpr
-     . infixExpr expr
+     . infixExpr
      . unionInterExpr
-     . termExpr
+     . diffExpr
+     . addExpr
+     . multExpr
      . powExpr
      . compExpr
      . appExpr
@@ -166,9 +167,9 @@ retOp = return . getOp
 dolarExpr :: TParser QState ExpQ -> TParser QState ExpQ
 dolarExpr = parseR ["$"] [| ($) |]
 
--- | @appInfix@ parses infix expressions between back quotes
-infixExpr :: TParser QState ExpQ -> TParser QState ExpQ -> TParser QState ExpQ
-infixExpr p = (`chainl1` (between (symbol "`") (symbol "`") (factor p) >>= retOp )) 
+-- | @infixExpr@ parses infix expressions between back quotes
+infixExpr :: TParser QState ExpQ -> TParser QState ExpQ
+infixExpr = (`chainl1` (between (symbol "`") (symbol "`") ident >>= retOp )) 
 
 -- | @boolExpr@ parses a booleanExpr
 boolExpr :: TParser QState ExpQ -> TParser QState ExpQ 
@@ -223,7 +224,7 @@ relSymbols = [ (["/="],[| (/=) |])
              , (["∉"],[| notMember |])
              ]
 
--- | @termConcat@ parses concatenation of expressions
+-- | @concatExpr@ parses concatenation of expressions
 concatExpr :: TParser QState ExpQ -> TParser QState ExpQ
 concatExpr =  parseL ["++"] [| (++) |]
 
@@ -235,7 +236,7 @@ appendExpr = parseL ["|>","⊳"] [| (\xs y -> xs ++ [y])  |]
 prependExpr ::  TParser QState ExpQ -> TParser QState ExpQ
 prependExpr = parseR ["<|", "⊲"] [| (:) |] 
 
--- | @term@ parses multiplicative expressions
+-- | @countExpr@ parses count expressions
 countExpr :: TParser QState ExpQ -> TParser QState ExpQ
 countExpr = parseL ["#"] [| MultiSet.occur |]
 
@@ -247,27 +248,38 @@ maxminExpr p = do
              <|> ((getOp [| min |],) <$> many  (symbol "↓" *> p))
   return $ Prelude.foldl op e0 es
 
--- | @aritExpr@ parses additive expressions
-aritExpr :: TParser QState ExpQ -> TParser QState ExpQ
-aritExpr =  parseLS [(["+"], [| (+) |]),(["-"],[| (-) |])]
-
 unionInterExpr :: TParser QState ExpQ -> TParser QState ExpQ
 unionInterExpr = assocSamePrecExpr [(["∪","⋃"],[| union |]),(["∩","⋂"],[| intersection |])]
 
--- | @term@ parses multiplicative expressions
-termExpr :: TParser QState ExpQ -> TParser QState ExpQ
-termExpr = parseLS [(["*"],[| (*) |]),
+diffExpr :: TParser QState ExpQ -> TParser QState ExpQ
+diffExpr = parseL ["\\"] [| difference |]
+
+-- | @addExpr@ parses additive expressions
+addExpr :: TParser QState ExpQ -> TParser QState ExpQ
+addExpr =  parseLS [(["+"], [| (+) |]),(["-"],[| (-) |])]
+
+-- | @mult@ parses multiplicative expressions
+multExpr :: TParser QState ExpQ -> TParser QState ExpQ
+multExpr = parseLS [(["*"],[| (*) |]),
                     (["/"],[| (/) |]),
-                    (["÷"],[| div |]),
-                    (["\\"],[| difference |])]
+                    (["÷"],[| div |])]
 
 -- | @powExpr@ parses power expressions
 powExpr ::  TParser QState ExpQ -> TParser QState ExpQ
 powExpr = parseLS [(["^"],[| (^) |]),(["**"],[| (**) |])]
 
+-- | @compExpr@ parses function composition expressions
 compExpr :: TParser QState ExpQ -> TParser QState ExpQ
 compExpr = parseR ["."] [| (.) |]
 
+-- | @appExpr@ parses applicative expressions
+appExpr :: TParser QState ExpQ -> TParser QState ExpQ
+appExpr = (`chainl1` (notFollowedBy
+                      -- (choice . map symbol $ ["-","#","\\","~","¬"])
+                      (getCat SYMBOL)
+                            *> return (\e1 e2 -> [| $e1 $e2 |])))
+
+-- | @extBinOpExpr@ parses operators defined in the haskell environment
 extBinOpExpr :: TParser QState ExpQ -> TParser QState ExpQ
 extBinOpExpr = (`chainl1` symbolOp)
              where symbolOp = do 
@@ -281,16 +293,10 @@ extBinOpExpr = (`chainl1` symbolOp)
                                       Just name -> varE name
                                          
 
--- | @appExpr@ parses applicative expressions
-appExpr :: TParser QState ExpQ -> TParser QState ExpQ
-appExpr = (`chainl1` (notFollowedBy
-                      -- (choice . map symbol $ ["-","#","\\","~","¬"])
-                      (getCat SYMBOL)
-                            *> return (\e1 e2 -> [| $e1 $e2 |])))
-
 -- | parses a @factor@ 
 factor ::  TParser QState ExpQ -> TParser QState ExpQ
 factor p = stringExpr <|> charExpr <|> number p <|> boolConstant 
+        <|> emptyConstant
         <|> ifExpr p
         <|> notBoolExpr p <|> iverLengthExpr p 
         <|> parentExpr p <|> ident <|> constructor
@@ -300,6 +306,10 @@ factor p = stringExpr <|> charExpr <|> number p <|> boolConstant
 boolConstant :: TParser QState ExpQ
 boolConstant =   name "True" *> return [| True |]
              <|> name "False" *> return [| False |]
+
+-- | @boolConstant@ parses a boolConstant 
+emptyConstant :: TParser QState ExpQ
+emptyConstant =   symbol "∅" *> return [| emptyCollection |]
 
 -- | Parses a number
 number :: TParser QState ExpQ -> TParser QState ExpQ
@@ -466,7 +476,7 @@ bindExpr exprP m = do {
                               return $ nestedBind m bindVars [| False |] [| undefined |]
                      [(pat,s)] -> do e <- parseBody hasBody (return $ return $ patternToBody pat)
                                      return $ nestedBind m bindVars p e
-                     _ -> -- More than one variable, must be a body
+                     _ -> -- More than one variable, must have a body
                           nestedBind m bindVars p <$> exprP
                 }
              where parseBody hasBody' e1 = if hasBody' then exprP else e1
