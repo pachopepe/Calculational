@@ -169,7 +169,7 @@ dolarExpr = parseR ["$"] [| ($) |]
 
 -- | @infixExpr@ parses infix expressions between back quotes
 infixExpr :: TParser QState ExpQ -> TParser QState ExpQ
-infixExpr = (`chainl1` (between (symbol "`") (symbol "`") ident >>= retOp )) 
+infixExpr = (`chainl1` (between (symbol "`") (symbol "`") identifierExpr >>= retOp )) 
 
 -- | @boolExpr@ parses a booleanExpr
 boolExpr :: TParser QState ExpQ -> TParser QState ExpQ 
@@ -262,7 +262,8 @@ addExpr =  parseLS [(["+"], [| (+) |]),(["-"],[| (-) |])]
 multExpr :: TParser QState ExpQ -> TParser QState ExpQ
 multExpr = parseLS [(["*"],[| (*) |]),
                     (["/"],[| (/) |]),
-                    (["÷"],[| div |])]
+                    (["÷"],[| div |]),
+                    (["%"],[| (%) |])]
 
 -- | @powExpr@ parses power expressions
 powExpr ::  TParser QState ExpQ -> TParser QState ExpQ
@@ -295,27 +296,20 @@ extBinOpExpr = (`chainl1` symbolOp)
 
 -- | parses a @factor@ 
 factor ::  TParser QState ExpQ -> TParser QState ExpQ
-factor p = stringExpr <|> charExpr <|> number p <|> boolConstant 
-        <|> emptyConstant
+factor p = stringExpr <|> charExpr <|> numberExpr p 
+        <|> emptyExpr
         <|> ifExpr p
-        <|> notBoolExpr p <|> iverLengthExpr p 
-        <|> parentExpr p <|> ident <|> constructor
-        <|> setExpr p <|> listExpr p <|> bagExpr p <|> lambdaExpr
+        <|> notExpr p <|> sharpExpr p  <|> negExpr p 
+        <|> identifierExpr <|> constructorExpr <|> lambdaExpr
+        <|> parentExpr p <|> setExpr p <|> listExpr p <|> bagExpr p
            
--- | @boolConstant@ parses a boolConstant 
-boolConstant :: TParser QState ExpQ
-boolConstant =   name "True" *> return [| True |]
-             <|> name "False" *> return [| False |]
-
--- | @boolConstant@ parses a boolConstant 
-emptyConstant :: TParser QState ExpQ
-emptyConstant =   symbol "∅" *> return [| emptyCollection |]
+-- | @emptyConstant@ parses the emptyConstant 
+emptyExpr :: TParser QState ExpQ
+emptyExpr =   symbol "∅" *> return [| emptyCollection |]
 
 -- | Parses a number
-number :: TParser QState ExpQ -> TParser QState ExpQ
-number p = do n1 <- (num <|> negExpr p) 
-              ((\n2 -> [| $n1 % $n2 |]) <$ symbol "%" <*> (num <|> negExpr p)
-               <|> return n1)
+numberExpr :: TParser QState ExpQ -> TParser QState ExpQ
+numberExpr p = num
 
 sIf :: String
 sIf = "if"
@@ -326,9 +320,6 @@ sThen = "then"
 sElse :: String
 sElse = "else"
 
-sNot :: String
-sNot = "not"
-
 -- | @ifExpr@ Parses an if then else expression
 ifExpr :: TParser QState ExpQ -> TParser QState ExpQ
 ifExpr p = (\cnd e1 e2 -> [| if $cnd then $e1 else $e2 |])
@@ -336,19 +327,19 @@ ifExpr p = (\cnd e1 e2 -> [| if $cnd then $e1 else $e2 |])
            <* name sThen <*> p
            <* name sElse <*> p
 
--- | @notBoolExpr@ parse unary not
-notBoolExpr :: TParser QState ExpQ -> TParser QState ExpQ
-notBoolExpr p = appE [| not |]
-                <$ (name sNot <|> symbol "¬" <|> symbol "~")
-                <*> factor p
+-- | @notExpr@ parse unary not
+notExpr :: TParser QState ExpQ -> TParser QState ExpQ
+notExpr p = appE [| not |]
+            <$ (symbol "¬" <|> symbol "~")
+            <*> factor p
 
--- | @notBoolExpr@ parse unary neg
+-- | @negExpr@ parse unary neg
 negExpr :: TParser QState ExpQ -> TParser QState ExpQ
 negExpr p =  appE [| negate |] <$ symbol "-" <*> factor p
 
 -- | @iverExpr@ parse unary sharp (converts a boolean to a number)
-iverLengthExpr :: TParser QState ExpQ -> TParser QState ExpQ
-iverLengthExpr p = appE [| iver |] <$ symbol "#" <*> factor p 
+sharpExpr :: TParser QState ExpQ -> TParser QState ExpQ
+sharpExpr p = appE [| iver |] <$ symbol "#" <*> factor p 
 
 -- | @stringExpr@ parse an String
 stringExpr :: TParser QState ExpQ
@@ -372,16 +363,16 @@ tupleExpr p = tupE <$> p `sepBy1` symbol ","
 -- | parses a quantifier
 quantifierExpr :: TParser QState ExpQ -> TParser QState ExpQ
 quantifierExpr p = do {
-  (op,cnv) <- qop;
-  code <- bindExpr p op;
+  (op,cnv) <- quantifierOp;
+  code <- comprehensionExpr p op;
   return [| $cnv $code |] 
   }
 
--- | @exprList@ parses an extensional list
-exprList :: TParser QState ExpQ
-exprList = try (extList <$> expr  
-                        <*> optionMaybe (symbol "," *> expr)
-                        <* symbol ".." <*> optionMaybe expr)
+-- | @extensionalExpr@ parses an extensional range and returns a list of the elements
+extensionalExpr :: TParser QState ExpQ
+extensionalExpr = try (extList <$> expr  
+                               <*> optionMaybe (symbol "," *> expr)
+                               <* symbol ".." <*> optionMaybe expr)
          <|> listE <$> expr `sepBy1` symbol ","
        where extList e1 Nothing Nothing     = [| [$e1 .. ] |]
              extList e1 Nothing (Just e3)   = [| [$e1 .. $e3] |]
@@ -413,18 +404,18 @@ patterns = many1 pattern
 pattern :: TParser QState Pat
 pattern = infixPattern
     where simpleP = patternId
-                  <|> LitP <$> literal
+                  <|> LitP <$> patternLiteral
                   <|> WildP <$ wildIdentifier 
                   <|> ConP <$> (mkName <$> constructorName) <*> patterns
                   <|> TupP <$> parens (sepBy pattern (symbol ","))
                   <|> ListP <$> enclosed "[" "]" (sepBy pattern (symbol ","))
           infixPattern = do sp <- simpleP
-                            (InfixP sp <$> inf <*> simpleP
+                            (InfixP sp <$> patternOp <*> pattern
                              <|> return sp)
-          inf = do smb@(x:xs) <- lookAhead (getCat SYMBOL)
-                   guard (x == ':' && (length xs == 1 || xs /= ":"))
-                   skip
-                   return $ mkName smb
+          patternOp = do smb@(x:xs) <- lookAhead (getCat SYMBOL)
+                         guard (x == ':' && (length xs == 1 || xs /= ":"))
+                         skip
+                         return $ mkName smb
 
 patternId :: TParser QState Pat
 patternId = do
@@ -433,19 +424,18 @@ patternId = do
   (AsP name <$ symbol "@" <*> pattern
        <|> (return $ VarP name)) 
 
-literal :: TParser QState Lit
-literal =   CharL . head <$> getCat CHAR
+patternLiteral :: TParser QState Lit
+patternLiteral =   CharL . head <$> getCat CHAR
         <|> StringL <$> getCat STRING
         <|> IntegerL . read <$> getCat NUMBER
-  
 
 -- | @collectionExpr@ parses a collection
 collectionExpr :: TParser QState ExpQ -> String -> String -> ExpQ -> ExpQ ->
                      (ExpQ -> ExpQ) -> TParser QState ExpQ 
 collectionExpr p open close empty singleton fromList =
   enclosed open close (lookAhead (tkClose close) *> return empty 
-     <|> try (bindExpr p singleton) 
-     <|> fromList <$> exprList)
+     <|> try (comprehensionExpr p singleton) 
+     <|> fromList <$> extensionalExpr)
 
 -- | @patternToBody@ 
 patternToBody :: Pat -> Exp
@@ -464,9 +454,9 @@ patternToBody (ViewP exp pat) = error "not supported pat ViewP in Body"
 patternToBody (WildP) = error "Wildcar _ can't be used in body"
 
 -- | parses an expression of shape "pat <- t | r : e"
-bindExpr :: TParser QState ExpQ -> Q Exp -> TParser QState ExpQ
-bindExpr exprP m = do {  
-                bindVars <- bindVarList exprP;
+comprehensionExpr :: TParser QState ExpQ -> Q Exp -> TParser QState ExpQ
+comprehensionExpr exprP m = do {  
+                bindVars <- bindExprList exprP;
                 (p,hasBody) <- ([| True |],True) <$ (symbol "|:" <|> symbol "::") 
                                <|> (,) <$ (symbol "|" <|> symbol ":")
                                        <*> rangeExpr exprP <*> option False (True <$ symbol ":"); 
@@ -516,25 +506,25 @@ choiceSymbol str@(c:_) = if isAlpha c
                          else symbol str
 
 -- | @qop@ creates the parser of quantifier operators
-qop :: TParser QState (ExpQ,ExpQ)
-qop =  ops qSymbols
+quantifierOp :: TParser QState (ExpQ,ExpQ)
+quantifierOp =  ops qSymbols
 -- qop = do s <- lookahead strs
 --          do types <- getInstanceNames ''Monoid
 
--- | @bindVar@ parses a bounded variable and a collection, the variable takes
+-- | @bindExpr@ parses a bounded variable and a collection, the variable takes
 --   the values from the collection
-bindVar :: TParser QState ExpQ -> TParser QState (Pat,ExpQ)
-bindVar p = (,) <$> pattern <* symbol "<-" <*> p
+bindExpr :: TParser QState ExpQ -> TParser QState (Pat,ExpQ)
+bindExpr p = (,) <$> pattern <* symbol "<-" <*> p
 {-
   where pattern = VarP . mkName <$> identifier
                        <|> WildP <$ wildIdentifier
                        <|> TupP <$> parens (sepBy pattern (symbol ",")) 
 -}
 
--- | @bindVarList@ parses the list of bounded variables and the collections 
+-- | @bindExprList@ parses the list of bounded variables and the collections 
 --   where the bounded variables takes their values
-bindVarList :: TParser QState ExpQ -> TParser QState [(Pat,ExpQ)]
-bindVarList p = sepBy (bindVar p) (symbol ",")
+bindExprList :: TParser QState ExpQ -> TParser QState [(Pat,ExpQ)]
+bindExprList p = sepBy (bindExpr p) (symbol ",")
 
 -- | @rabgeExpr@ parses a range expression
 rangeExpr :: TParser QState ExpQ -> TParser QState ExpQ
@@ -583,18 +573,18 @@ splitDots (x:xs) = (x:ys):yss
                                            
 -- | @reservedWord@ parses a reservedWord
 reservedWord :: String -> Bool
-reservedWord s = s `Prelude.elem` [sIf,sThen,sElse,sNot]
+reservedWord s = s `Prelude.elem` [sIf,sThen,sElse]
 
 -- | @ident@ parses an identifier
-ident ::  TParser QState ExpQ
-ident = do id <- identifier
-           let x = mkName id
-           return $ varE x
+identifierExpr ::  TParser QState ExpQ
+identifierExpr = do id <- identifier
+                    let x = mkName id
+                    return $ varE x
 
 
--- | @constructor@ parses a constructor
-constructor ::  TParser QState ExpQ
-constructor = do { ct <- constructorName ;
+-- | @constructorExpr@ parses a constructor
+constructorExpr ::  TParser QState ExpQ
+constructorExpr = do { ct <- constructorName ;
                    let { x = mkName ct };
                    return . return $ ConE x
                  }
