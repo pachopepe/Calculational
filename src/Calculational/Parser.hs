@@ -438,6 +438,7 @@ collectionExpr p open close empty singleton fromList =
      <|> fromList <$> extensionalExpr)
 
 -- | @patternToBody@ 
+{-
 patternToBody :: Pat -> Exp
 patternToBody (LitP lit)  = LitE lit         
 patternToBody (VarP name) = VarE name        
@@ -452,6 +453,8 @@ patternToBody (TildeP pat) = error "not supported pat TildeP ~ in Body"
 patternToBody (BangP pat) = error "not supported pat BangP ! in Body"
 patternToBody (ViewP exp pat) = error "not supported pat ViewP in Body"
 patternToBody (WildP) = error "Wildcar _ can't be used in body"
+-}
+
 
 -- | parses an expression of shape "pat <- t | r : e"
 comprehensionExpr :: TParser QState ExpQ -> Q Exp -> TParser QState ExpQ
@@ -463,19 +466,26 @@ comprehensionExpr exprP m = do {
                 case bindVars of
                      [] -> -- There are no variables
                            do when hasBody (() <$ exprP)
-                              return $ nestedBind m bindVars [| False |] [| undefined |]
-                     [(pat,s)] -> do e <- parseBody hasBody (return $ return $ patternToBody pat)
-                                     return $ nestedBind m bindVars p e
+                              return $ nestedBind m [] [| False |] [| undefined |]
+                     -- [(pat,s)] -> do e <- parseBody hasBody (return . return $ patternToBody pat)
+                     [(pat,s)] -> if hasBody
+                                  then nestedBind m bindVars p <$> exprP
+                                  else return $ singleBind m pat s p  
                      _ -> -- More than one variable, must have a body
                           nestedBind m bindVars p <$> exprP
                 }
-             where parseBody hasBody' e1 = if hasBody' then exprP else e1
-
--- | @nestedBind m vars p e@ create the code of the quantifier
--- @vars@ is the list (pattern,elements), f is the body function, p is the range
-nestedBind f vars r e = auxNested vars 
-                  where auxNested [] = [| if $r then $f $e else mempty |]
-                        auxNested ((px,s):vars') = [| $s `bind` $(lambda [px] (auxNested vars')) |] 
+             where endBind f r e = [| if $r then $f $e else mempty |]
+                   singleBind f px@(AsP name _) s r =
+                        [| $s `bind` $(lambda [ px ] (endBind f r (return $ VarE name))) |] 
+                   singleBind f pat s r = do 
+                         name <- newName "_v"
+                         [| $s `bind` $(lambda [ (AsP name pat) ] (endBind f r (return $ VarE name))) |] 
+                   -- | @nestedBind m vars p e@ create the code of the quantifier
+                   -- @vars@ is the list (pattern,elements), f is the body function, p is the range
+                   nestedBind f vars r e = auxNested vars 
+                        where auxNested [] = endBind f r e
+                              auxNested ((px,s):vars') = 
+                                    [| $s `bind` $(lambda [ px ] (auxNested vars')) |] 
 
 -- | @qSymbols@ List of quantifier symbols and injective funtions to convert between the values and the monoid 
 qSymbols :: [([String], (Q Exp, Q Exp))]
