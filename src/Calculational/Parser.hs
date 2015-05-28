@@ -52,7 +52,7 @@ advance _ _ (Right (_, pos) : _) = pos
 advance _ _ (Left err : _) = errorPos err
 advance pos _ [] = pos
 
--- | @'sat' p@ reads a new token and check if satisfies the predicate @p@
+-- | @'sat' p@ reads a new token and check if it satisfies the predicate @p@
 sat :: (Token -> Bool) -> TParser a Token
 sat p = do x <- lookAhead anyToken
            case x of
@@ -67,7 +67,7 @@ showTok :: Either ParseError TokenPos -> String
 showTok (Right (Token cat s,pos)) = show cat ++ ": "++s
 showTok (Left err) = show err 
 
--- | @'AcceptTk' t@ accepts if the next token is equal to @t@
+-- | The @'AcceptTk' t@ expression accepts if the token is equal to @t@
 acceptTk :: Token -> TParser a ()
 acceptTk tt = sat (== tt) >> return ()  
             <?> "Assert fail: expected '"++ show tt ++ "'"
@@ -164,6 +164,7 @@ assocSamePrecExpr xs p = do
 retOp :: Q Exp -> TParser QState ( Q Exp -> Q Exp -> Q Exp)
 retOp = return . getOp 
 
+-- | @dolarExpr@ parses an explicit function application 'f $ e'
 dolarExpr :: TParser QState ExpQ -> TParser QState ExpQ
 dolarExpr = parseR ["$"] [| ($) |]
 
@@ -248,6 +249,7 @@ maxminExpr p = do
              <|> ((getOp [| min |],) <$> many  (symbol "↓" *> p))
   return $ Prelude.foldl op e0 es
 
+-- | @unionInterExpr@ parses union and intersection expressions
 unionInterExpr :: TParser QState ExpQ -> TParser QState ExpQ
 unionInterExpr = assocSamePrecExpr [(["∪","⋃"],[| union |]),(["∩","⋂"],[| intersection |])]
 
@@ -307,16 +309,19 @@ factor p = stringExpr <|> charExpr <|> numberExpr p
 emptyExpr :: TParser QState ExpQ
 emptyExpr =   symbol "∅" *> return [| emptyCollection |]
 
--- | Parses a number
+-- | @numberExpr@ Parses a number
 numberExpr :: TParser QState ExpQ -> TParser QState ExpQ
 numberExpr p = num
 
+-- | @sIf@ is the 'if' 'String'
 sIf :: String
 sIf = "if"
 
+-- | @sThen@ is the 'then' 'String'
 sThen :: String
 sThen = "then"
 
+-- | @sElse@ is the 'else' 'String'
 sElse :: String
 sElse = "else"
 
@@ -337,9 +342,9 @@ notExpr p = appE [| not |]
 negExpr :: TParser QState ExpQ -> TParser QState ExpQ
 negExpr p =  appE [| negate |] <$ symbol "-" <*> factor p
 
--- | @iverExpr@ parse unary sharp (converts a boolean to a number)
+-- | @sharpExpr@ parse unary sharp (converts a boolean to a number)
 sharpExpr :: TParser QState ExpQ -> TParser QState ExpQ
-sharpExpr p = appE [| iver |] <$ symbol "#" <*> factor p 
+sharpExpr p = appE [| sharp |] <$ symbol "#" <*> factor p 
 
 -- | @stringExpr@ parse an String
 stringExpr :: TParser QState ExpQ
@@ -348,10 +353,6 @@ stringExpr = litE . StringL <$> getCat STRING
 -- | @stringExpr@ parse a Char
 charExpr :: TParser QState ExpQ
 charExpr = litE . CharL . head  <$> getCat CHAR
-
-{-
-antiExpr = lexeme $ do{ symbol "$";e <- between "[|" "|]" ; return $ return e }
--}
 
 -- | @parentExpr@ parses a parenthesized expression
 parentExpr p = parens (quantifierExpr p <|> tupleExpr p)
@@ -368,7 +369,7 @@ quantifierExpr p = do {
   return [| $cnv $code |] 
   }
 
--- | @extensionalExpr@ parses an extensional range and returns a list of the elements
+-- | @extensionalExpr@ parses an extensional range and returns a list of elements
 extensionalExpr :: TParser QState ExpQ
 extensionalExpr = try (extList <$> expr  
                                <*> optionMaybe (symbol "," *> expr)
@@ -417,6 +418,7 @@ pattern = infixPattern
                          skip
                          return $ mkName smb
 
+-- | @patternId@ parses an identifier pattern
 patternId :: TParser QState Pat
 patternId = do
   ident <- identifier
@@ -424,6 +426,7 @@ patternId = do
   (AsP name <$ symbol "@" <*> pattern
        <|> (return $ VarP name)) 
 
+-- | @patternId@ parses a pattern literal
 patternLiteral :: TParser QState Lit
 patternLiteral =   CharL . head <$> getCat CHAR
         <|> StringL <$> getCat STRING
@@ -437,47 +440,33 @@ collectionExpr p open close empty singleton fromList =
      <|> try (comprehensionExpr p singleton) 
      <|> fromList <$> extensionalExpr)
 
--- | @patternToBody@ 
-{-
-patternToBody :: Pat -> Exp
-patternToBody (LitP lit)  = LitE lit         
-patternToBody (VarP name) = VarE name        
-patternToBody (TupP pats) = TupE (map patternToBody pats)            
-patternToBody (ConP name pats) = Prelude.foldl AppE (ConE name) (map patternToBody pats)  
-patternToBody (InfixP pat1 name pat2) = InfixE (Just $ patternToBody pat1) (ConE name) (Just $ patternToBody pat2) 
-patternToBody (AsP name pat) = VarE name -- (patternToBody pat) 
-patternToBody (RecP name fieldPats) = RecConE name  [(name,patternToBody pat) | (name,pat) <- fieldPats]
-patternToBody (ListP pats) = ListE (map patternToBody pats)
-patternToBody (SigP pat ttype) = (patternToBody pat)
-patternToBody (TildeP pat) = error "not supported pat TildeP ~ in Body"
-patternToBody (BangP pat) = error "not supported pat BangP ! in Body"
-patternToBody (ViewP exp pat) = error "not supported pat ViewP in Body"
-patternToBody (WildP) = error "Wildcar _ can't be used in body"
--}
-
-
--- | parses an expression of shape "pat <- t | r : e"
+-- | parses an expression of the form "pat <- t | r : e"
 comprehensionExpr :: TParser QState ExpQ -> Q Exp -> TParser QState ExpQ
 comprehensionExpr exprP m = do {  
                 bindVars <- bindExprList exprP;
-                (p,hasBody) <- ([| True |],True) <$ (symbol "|:" <|> symbol "::") 
+                (p,hasBody) <- -- There is not explicit range, it is True
+                               ([| True |],True) <$ (symbol "|:" <|> symbol "::") 
+                               -- There is a range
                                <|> (,) <$ (symbol "|" <|> symbol ":")
-                                       <*> rangeExpr exprP <*> option False (True <$ symbol ":"); 
+                                       <*> rangeExpr exprP 
+                                       -- parse the body
+                                       <*> option False (True <$ symbol ":"); 
                 case bindVars of
                      [] -> -- There are no variables
                            do when hasBody (() <$ exprP)
                               return $ nestedBind m [] [| False |] [| undefined |]
-                     -- [(pat,s)] -> do e <- parseBody hasBody (return . return $ patternToBody pat)
                      [(pat,s)] -> if hasBody
-                                  then nestedBind m bindVars p <$> exprP
-                                  else return $ singleBind m pat s p  
+                                  then -- There is a body in the quantifier
+                                       nestedBind m bindVars p <$> exprP
+                                  else -- There is no body in the quantifier
+                                       return $ noBodyBind m pat s p  
                      _ -> -- More than one variable, must have a body
                           nestedBind m bindVars p <$> exprP
                 }
              where endBind f r e = [| if $r then $f $e else mempty |]
-                   singleBind f px@(AsP name _) s r =
+                   noBodyBind f px@(AsP name _) s r =
                         [| $s `bind` $(lambda [ px ] (endBind f r (return $ VarE name))) |] 
-                   singleBind f pat s r = do 
+                   noBodyBind f pat s r = do 
                          name <- newName "_v"
                          [| $s `bind` $(lambda [ (AsP name pat) ] (endBind f r (return $ VarE name))) |] 
                    -- | @nestedBind m vars p e@ create the code of the quantifier
@@ -496,7 +485,7 @@ qSymbols = [ (["forall","/\\","⋀","∀"],([| All |], [| getAll |]))
            , (["++","concat"],([| id |], [| id |]))
            , (["+","∑","Ʃ","Σ","sum"],([| Sum |],[| getSum |]))
            , (["*","∏","Π","product"],([| Product |], [| getProduct |]))
-           , (["#"],([| Sum . iver |], [| getSum |]))
+           , (["#"],([| Sum . sharp |], [| getSum |]))
            , (["∪","⋃","union"],([| Union |], [| getUnion |]))
            , (["∩","⋂","intersection"],([| Intersection |], [| getIntersection |]))
            , (["↑","max"],([| Maximum |], [| getMaximum |]))
@@ -510,6 +499,7 @@ ops [] = fail "not found"
 ops ((s,v):xs) = v <$ (choice . map choiceSymbol $ s)
                 <|> ops xs
 
+-- | @choiceSymbol@ parse a function name or symbol depending the first character of the string 
 choiceSymbol :: String -> TParser QState ()
 choiceSymbol str@(c:_) = if isAlpha c
                          then name str
@@ -525,18 +515,14 @@ quantifierOp =  ops qSymbols
 --   the values from the collection
 bindExpr :: TParser QState ExpQ -> TParser QState (Pat,ExpQ)
 bindExpr p = (,) <$> pattern <* symbol "<-" <*> p
-{-
-  where pattern = VarP . mkName <$> identifier
-                       <|> WildP <$ wildIdentifier
-                       <|> TupP <$> parens (sepBy pattern (symbol ",")) 
--}
 
--- | @bindExprList@ parses the list of bounded variables and the collections 
---   where the bounded variables takes their values
+-- | @bindExprList@ parses the list of bounded variables and collections 
+-- x_0 <- s_0, x1 <- s_1, ..., x_n <- s_n
+--   where bounded variable x_i takes their values from collection s_i, 0 <= i <= n
 bindExprList :: TParser QState ExpQ -> TParser QState [(Pat,ExpQ)]
 bindExprList p = sepBy (bindExpr p) (symbol ",")
 
--- | @rabgeExpr@ parses a range expression
+-- | @rangeExpr@ parses a range expression
 rangeExpr :: TParser QState ExpQ -> TParser QState ExpQ
 rangeExpr p = p <|> return [| True |]
 
@@ -575,6 +561,8 @@ wildIdentifier = parseSatCat NAME ((=='_') . head)
 constructorName  :: TParser QState String
 constructorName = parseSatCat NAME (isUpper . head . last . splitDots)
 
+
+-- | @splitSots@ split an string with dots in a list of strings 
 splitDots :: String -> [String]
 splitDots [] =  [[]]
 splitDots ('.':xs) = []:splitDots xs
@@ -600,11 +588,11 @@ constructorExpr = do { ct <- constructorName ;
                  }
 
 
--- | creates a lambda abstraction
+-- | @lambda@ creates a lambda abstraction
 lambda :: Monad m => [Pat] -> m Exp -> m Exp
 lambda px mBody = mBody >>= (\body -> return $ LamE px body)
 
--- | parses an expression
+-- | @parseExpr@ parses an expression
 parseExpr :: Monad m => SourcePos -> String -> m ExpQ
 parseExpr pos s =
     case runParser p (QState {}) "" stream of

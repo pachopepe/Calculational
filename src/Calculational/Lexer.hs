@@ -10,23 +10,24 @@ import Control.Applicative ((<*>),(<*),(*>),(<$>),(<|>),(<$))
 import Control.Monad.Identity
 
 
-
-data TkCategory = SYMBOL
-                | LEFTP
-                | RIGHTP  
-                | OPEN
-                | CLOSE
-                | NUMBER
-                | NAME
-                | STRING
-                | CHAR
-                | END
+-- | Token classificaion by categories
+data TkCategory = SYMBOL -- ^ The token is a symbol
+                | LEFTP  -- ^ Left parenthesis
+                | RIGHTP -- ^ Right parenthesis 
+                | OPEN   -- ^ Unicode open symbol 
+                | CLOSE  -- ^ Unicode close symbol 
+                | NUMBER -- ^ A number
+                | NAME   -- ^ A name is an identifier, begining by upper or lower case letter
+                | STRING -- ^ An string (delimited by double quotes)
+                | CHAR   -- ^ A char (delimited by quotes)
+                | END    -- ^ The end of file token
                 deriving (Show,Eq)
 
+-- | A 'Token' has a classification and the string of the token
 data Token = Token TkCategory String
            deriving (Show,Eq)
                       
--- | Inspects if a char is member of a UTF8 Category
+-- | Inspects if a char is member of an UTF8 Category
 isCategory :: GeneralCategory -> Char -> Bool
 isCategory cat c = generalCategory c == cat
 
@@ -40,17 +41,18 @@ oneChar = do c <- anyToken
                                                        ('\\','\\'),('\'','\''),('"','"')]      
              else return c
 
--- | Parse a Character or quote 
+-- | An string token
 getString :: CharParser () String
 getString = do c <- lookAhead anyToken 
                case c of
                  '\"' -> return ""
                  _ -> (:) <$> oneChar <*> getString
 
+-- | An optional bar for open and close delimiter token
 optionalBar :: CharParser () String
 optionalBar = option "" (string "|")
 
--- | Parser of one token 
+-- | Gets one token 
 token :: CharParser () Token
 token =   Token CHAR . return <$ char '\'' <*> oneChar <* char '\''
       <|> Token STRING <$ char '\"' <*> getString <* char '\"'
@@ -70,6 +72,7 @@ token =   Token CHAR . return <$ char '\'' <*> oneChar <* char '\''
                                       || isCategory OtherPunctuation c
                                       || isCategory DashPunctuation c)))
 
+-- | Gets the end of file token 
 end :: CharParser () Token
 end = Token END "" <$ eof
 
@@ -85,10 +88,11 @@ tokens :: Parser [TokenPos]
 tokens = spaces *> many (parsePos token <* spaces)
        <|> return <$> parsePos end
 
--- | 
+-- | Tokenize an string as a list of tokens 
 tokenize :: SourceName -> String -> Either ParseError [TokenPos]
 tokenize = runParser (do { xs <- tokens ; x <- parsePos end; return (xs++[x]) }) ()
 
+-- | Tokenize an string as a list of tokens setting the positiion to 'pos' 
 tokenizer :: SourcePos -> String -> [Either ParseError TokenPos]
 tokenizer pos str = loop initialState
   where runParser = runPT' str (spaces *> parsePos (token <|> end))

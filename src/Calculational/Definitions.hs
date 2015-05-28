@@ -1,12 +1,13 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 
 module Calculational.Definitions(
   implies
-  , Iver(..)
+  , Sharp(..)
   , CollectionClass(..)
   )
 where 
@@ -16,25 +17,11 @@ import Data.List as L
 import qualified Data.Set as Set
 import qualified Data.MultiSet as MultiSet
 
+-- | The implication operator @p => q@ 
 implies :: Bool -> Bool -> Bool
 implies p q = (not p) || q
 
-class Iver a where
-  iver :: Num b => a -> b
-
-instance Iver Bool where
-  iver True  = 1
-  iver False = 0
-
-instance Iver ([] a) where
-  iver = L.genericLength
-
-instance Iver (Set.Set a) where
-  iver = fromIntegral . Set.size
-
-instance Iver (MultiSet.MultiSet a) where
-  iver = fromIntegral . MultiSet.size
-
+-- | The collections operations
 class CollectionClass m a where
     type DC m a :: Constraint
     size :: m a -> Int
@@ -97,4 +84,21 @@ instance CollectionClass MultiSet.MultiSet a where
       subset = MultiSet.isProperSubsetOf
       subsetEq = MultiSet.isSubsetOf
       emptyCollection = MultiSet.empty
+
+-- | Used for overload the sharp @#@ operator
+class Sharp a where
+  sharp :: Num b => a -> b
+
+-- | Sharpson applied to booleans is the iverson operatot: 
+-- @
+--     sharp True = 1
+--     sharp False = 0
+-- @ 
+instance Sharp Bool where
+  sharp True  = 1
+  sharp False = 0
+
+-- | Sharp applied to a finite container gets his length 
+instance CollectionClass c a => Sharp (c a) where
+  sharp = fromIntegral . size
 
