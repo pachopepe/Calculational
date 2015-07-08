@@ -30,9 +30,9 @@ ghci> [calc| (+ x <- [-100 .. 100] | 0 <= x < 10 : x*x) |]
 
 ```haskell
 {-# LANGUAGE QuasiQuotes #-}
-...
+
 import Calculational
-... 
+
 sum' :: Num a -> [a] -> a
 sum' xs = [calc| (+ x <- xs | : x) |]
 
