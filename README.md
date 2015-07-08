@@ -33,10 +33,10 @@ ghci> [calc| (+ x <- [-100 .. 100] | 0 <= x < 10 : x*x) |]
 
 import Calculational
 
-sum' :: Num a -> [a] -> a
+sum' :: Num a => [a] -> a
 sum' xs = [calc| (+ x <- xs | : x) |]
 
-product' :: Num a -> [a] -> a
+product' :: Num a => [a] -> a
 product' xs = [calc| (* x <- xs | : x) |]
 ```
 
