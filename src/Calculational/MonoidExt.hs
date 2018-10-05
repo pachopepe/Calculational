@@ -3,22 +3,20 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
------------------------------------------------------------------------------
--- | Módulo Quantifier.MonoidExt
--- Monoid extensions to be used with quantifiers
---
--- Autor: Francsco J. Cháves
---
--- 
------------------------------------------------------------------------------
 
+{-|
+Module      : Calculational.MonoidExt
+Description : Expressions parser
+Copyright   : (c) Francisco J Cháves, 2012
+License     : MIT
+Maintainer  : pachopepe@gmail.com
+Stability   : experimental
+
+A expression parser for Dijkstra-Sholten style like expressions. 
+-}
 module Calculational.MonoidExt
 ( bind
 , average
-, Product(..)
-, Sum(..)
-, All(..)
-, Any(..)
 , Equiv(..)
 , NEquiv(..)
 , Infty(..)
@@ -36,18 +34,18 @@ where
 import GHC.Prim (Constraint(..))
 import Data.Monoid
 import Data.Ratio
-import Control.Applicative
+import Control.Applicative as A
 import Control.Monad
 import Data.Foldable as F
 import Data.List as L
-import qualified Data.Set as Set
-import qualified Data.MultiSet as MultiSet
+import Data.Set as Set
+import Data.MultiSet as MultiSet hiding (bind)
 
 -- | Boolean monoid under equivalence
 newtype Equiv  = Equiv { getEquiv :: Bool }
                deriving (Eq, Ord, Read, Show, Bounded)
 
--- | Bolean monoid under inequivalence
+-- | Boolean monoid under inequivalence
 newtype NEquiv  = NEquiv { getNEquiv :: Bool }
                 deriving (Eq, Ord, Read, Show, Bounded)
 
@@ -59,7 +57,7 @@ instance Monoid NEquiv where
      mempty = NEquiv False
      (NEquiv x) `mappend` (NEquiv y) = NEquiv (x /= y)
 
--- | the 'bind' operator is the 'foldMap' function swapping
+-- | The 'bind' operator is the 'foldMap' function swapping
 -- his arguments
 bind :: (Monoid m, Foldable t) => t a -> (a -> m) -> m
 bind = flip foldMap
@@ -72,9 +70,10 @@ newtype Join m = Join { getJoin :: m }
 newtype Union m = Union { getUnion :: m }
                 deriving (Eq, Ord, Read, Show, Bounded)
 
+-- | Monoid under union
 class UnionClass m a where
     type UC m a :: Constraint
-    munion :: UC m a => m a -> m a -> m a
+    munion :: UC m a => m a -> m a -> m a    -- ^ Union overloading function
 
 instance (UC m a,UnionClass m a) => UnionClass (Universe m) a where
       type UC (Universe m) a = UC m a
@@ -102,9 +101,10 @@ instance UnionClass MultiSet.MultiSet a where
 newtype Intersection m = Intersection { getIntersection :: m }
                        deriving (Eq, Ord, Read, Show, Bounded)
 
+-- | Monoid under intersection
 class IntersectionClass m a where
     type IC m a :: Constraint
-    mintersection :: (IC m a) => m a -> m a -> m a
+    mintersection :: (IC m a) => m a -> m a -> m a -- ^ Intersection overloading function
 
 instance (IC m a,IntersectionClass m a,Bounded (m a),Eq a,Ord a) => Monoid (Intersection (m a)) where
       mempty = Intersection maxBound
@@ -161,7 +161,7 @@ instance Applicative m => Applicative (Universe m) where
     _ <*> _ = Universe 
 
 instance (Alternative m) => Alternative (Universe m) where
-    empty = Container empty
+    empty = Container (A.empty)
     Container xs <|> Container ys = Container (xs <|> ys)
     Universe <|> _ = Universe
     _ <|> Universe = Universe
@@ -185,7 +185,7 @@ instance Foldable m => Foldable (Universe m) where
     foldr f z (Container xs) = F.foldr f z xs
     foldr f z Universe = z
 
--- Monoid under maximum
+-- | Monoid under maximum
 -- The type 'a' must be bounded
 newtype Maximum a = Maximum { getMaximum :: a }
                   deriving (Eq, Ord, Read, Show, Bounded)

@@ -1,4 +1,15 @@
+{-# LANGUAGE Safe #-}
 
+{-|
+Module      : Calculational.Lexer
+Description : Lexer
+Copyright   : (c) Francisco J Cháves, 2012
+License     : MIT
+Maintainer  : pachopepe@gmail.com
+Stability   : experimental
+
+The lexer for the Dijkstra-Sholten style parser expressions. 
+-}
 module Calculational.Lexer where
 
 import Text.ParserCombinators.Parsec hiding ((<|>),token,tokens)
@@ -110,6 +121,8 @@ runPT'
      -> State s u
      -> m (Either ParseError (t1, State s u))
 -}
+-- | Funtion to run the lexer independently
+runPT' :: Monad m => t -> N.ParsecT s u m t1 -> State s u -> m (Either ParseError (t1, State s u))
 runPT'  src p st0
     = do res <- N.runParsecT p st0
          r <- parserReply res

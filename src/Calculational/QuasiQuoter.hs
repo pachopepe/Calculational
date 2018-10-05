@@ -1,15 +1,15 @@
 {-# LANGUAGE DeriveDataTypeable, QuasiQuotes, TemplateHaskell #-}
 
------------------------------------------------------------------------------
--- | Módulo Quantifier.Operator: funciones para utilizar la sintaxis de la
---   lógica calculatoria. 
---
--- Autor: Francsco J. Cháves
---
--- 
------------------------------------------------------------------------------
+{-|
+Module      : Calculational.Quasiquoter
+Description : Expressions parser
+Copyright   : (c) Francisco J Cháves, 2012
+License     : MIT
+Maintainer  : pachopepe@gmail.com
+Stability   : experimental
 
-
+A expression parser for Dijkstra-Sholten style like expressions. 
+-}
 module Calculational.QuasiQuoter (
   calc
 )
@@ -24,8 +24,8 @@ import Text.Parsec.Pos (newPos)
 import Calculational.Parser (parseExpr)
 import Calculational.MonoidExt
 
--- quoteExprPat :: String -> TH.PatQ
  
+-- | The calculational quasiquoter function
 calc  :: QuasiQuoter
 calc =  QuasiQuoter quoteExprExp undefined undefined undefined
 

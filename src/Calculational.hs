@@ -1,13 +1,19 @@
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
 
+{-|
+Module      : Calculational
+Description : Dijkstra-Sholten style like expressions.
+Copyright   : (c) Francisco J Cháves, 2012
+License     : MIT
+Maintainer  : pachopepe@gmail.com
+Stability   : experimental
+
+A Dijkstra-Sholten style like expressions that execute. 
+-}
 module Calculational( 
   calc
 , average
 , bind
-, Product(..)
-, Sum(..)
-, All(..)
-, Any(..)
 , Equiv(..)
 , NEquiv(..)
 , Infty(..)
@@ -16,8 +22,9 @@ module Calculational(
 , Average(..)
 , Universe(..)
 , module Calculational.Definitions 
-, Set.Set(..)
-, MultiSet.MultiSet(..)
+, module Data.Monoid
+-- , module Data.Set -- Set.Set(..)
+-- , module Data.MultiSet -- MultiSet.MultiSet(..)
 )
 where
   
@@ -26,5 +33,5 @@ import Calculational.QuasiQuoter
 import Calculational.MonoidExt
 import Calculational.Definitions
 
-import qualified Data.Set as Set
-import qualified Data.MultiSet as MultiSet
+-- import Data.Set -- as Set
+-- import Data.MultiSet -- as MultiSet

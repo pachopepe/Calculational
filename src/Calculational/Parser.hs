@@ -8,14 +8,14 @@
 {-# LANGUAGE TupleSections #-}
 
 {-|
-Module      : Quantifier.Expr
+Module      : Calculational.Parser
 Description : Expressions parser
 Copyright   : (c) Francisco J Cháves, 2012
 License     : MIT
 Maintainer  : pachopepe@gmail.com
 Stability   : experimental
 
-A expression parser for Dijkstra style like expressions. 
+A expression parser for Dijkstra-Sholten style like expressions. 
 -}
 module Calculational.Parser
   (parseExpr)
@@ -62,7 +62,7 @@ sat p = do x <- lookAhead anyToken
                 Left err -> error . show $ err
       where test (Right (t,pos)) = if p t then Just t else Nothing
 
--- | Used as a show for tokenPrim function. 
+-- | Used to show a token. 
 showTok :: Either ParseError TokenPos -> String
 showTok (Right (Token cat s,pos)) = show cat ++ ": "++s
 showTok (Left err) = show err 
@@ -359,7 +359,7 @@ parentExpr p = parens (quantifierExpr p <|> tupleExpr p)
 
 -- | parses a tuple
 tupleExpr :: TParser QState ExpQ -> TParser QState ExpQ 
-tupleExpr p = tupE <$> p `sepBy1` symbol "," 
+tupleExpr p = tupE <$> p `sepBy` symbol "," 
 
 -- | parses a quantifier
 quantifierExpr :: TParser QState ExpQ -> TParser QState ExpQ
