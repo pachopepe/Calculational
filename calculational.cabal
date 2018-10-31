@@ -14,9 +14,9 @@ description:       I implement a Dijkstra style notation for quantifiers,
                    Computer and Systems engineering students.  
 category:          Calculational, DSL, Mathematics.
 stability:         Experimental
+tested-with:       GHC == 7.10.2, GHC == 7.10.3, GHC == 8.0.1
 cabal-version:     >= 1.8
 build-type:        Simple
-tested-with:       GHC == 7.8.4
 
 source-repository head
   type:     git
@@ -30,7 +30,6 @@ library
                       template-haskell >= 2 && < 3,
                       multiset >= 0.2.2 && < 1,
                       containers >= 0 && < 1,
-                      ghc-prim >= 0.4 && < 0.5, 
                       QuickCheck >= 2.0 && < 3                     
   exposed-modules:    Calculational.MonoidExt
                       Calculational.Definitions

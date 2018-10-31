@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE CPP #-}
 
 {-|
 Module      : Calculational.Definitions
@@ -22,7 +23,8 @@ module Calculational.Definitions(
   )
 where 
 
-import GHC.Prim (Constraint(..))
+import GHC.Exts (Constraint(..))
+
 import Data.List as L
 import Data.Set as Set
 import Data.MultiSet as MultiSet

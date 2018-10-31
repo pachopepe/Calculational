@@ -31,7 +31,7 @@ module Calculational.MonoidExt
 )
 where
 
-import GHC.Prim (Constraint(..))
+import GHC.Exts (Constraint(..))
 import Data.Monoid
 import Data.Ratio
 import Control.Applicative as A
