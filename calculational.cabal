@@ -1,54 +1,71 @@
-name:              calculational
-version:           0.0.1
-license:           MIT
-license-file:      LICENSE
-author:            Francisco Cháves
-maintainer:        Francisco Cháves
-synopsis:          Quantifiers, Lists, Sets in a Dijkstra style.
-description:       I implement a Dijkstra style notation for quantifiers, 
-                   lists, sets and expressions that can be evaluated.
-                   The library could reference haskell variables. 
-                   The expresions are translated using quasiquotes 
-                   and template-haskell. I used the library to show some 
-                   concepts of applied logic and discrete math courses for
-                   Computer and Systems engineering students.  
-category:          Calculational, DSL, Mathematics.
-stability:         Experimental
-tested-with:       GHC == 7.10.2, GHC == 7.10.3, GHC == 8.0.1
-cabal-version:     >= 1.8
-build-type:        Simple
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.31.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 8af5011748cef2824d8b6c6c52c00a5001dddbd1265e52a492ce0c6bb54b22b8
+
+name:           calculational
+version:        0.1.1
+synopsis:       Quantifiers, Lists, Sets in a Dijkstra style.
+description:    I implement a Dijkstra style notation for quantifiers, lists, sets and expressions that can be evaluated. The library could reference haskell variables. The expresions are translated using quasiquotes and template-haskell. I used the library to show some concepts of applied logic and discrete math courses for Computer and Systems engineering students.
+category:       Calculational, DSL, Mathematics.
+homepage:       https://github.com/pachopepe/Calculational#readme
+bug-reports:    https://github.com/pachopepe/Calculational/issues
+author:         Francisco Chaves
+maintainer:     Fancisco Chaves <pachopepe@gmail.com>
+license:        MIT
+license-file:   LICENSE
+tested-with:    GHC == 8.4.4
+build-type:     Simple
 
 source-repository head
-  type:     git
-  location: https://github.com/pachopepe/Calculational.git
+  type: git
+  location: https://github.com/pachopepe/Calculational
 
 library
-  build-depends:      base >= 4 && < 5,
-                      mtl >= 2 && < 3,
-                      parsec >= 3 && < 4,
-                      syb >= 0 && < 1,
-                      template-haskell >= 2 && < 3,
-                      multiset >= 0.2.2 && < 1,
-                      containers >= 0 && < 1,
-                      QuickCheck >= 2.0 && < 3                     
-  exposed-modules:    Calculational.MonoidExt
-                      Calculational.Definitions
-                      Calculational
-  other-modules:      Calculational.QuasiQuoter
-                      Calculational.Parser
-                      Calculational.Lexer
-  hs-source-dirs:     src
-  extensions:         DoAndIfThenElse
+  exposed-modules:
+      Calculational.MonoidExt
+      Calculational.Definitions
+      Calculational
+  other-modules:
+      Calculational.Lexer
+      Calculational.Parser
+      Calculational.QuasiQuoter
+      Paths_calculational
+  hs-source-dirs:
+      src
+  default-extensions: QuasiQuotes
+  build-depends:
+      base >=4 && <5
+    , containers
+    , mtl >=2 && <3
+    , multiset
+    , parsec >=3 && <4
+    , syb >=0 && <1
+    , template-haskell >=2 && <3
+  default-language: Haskell2010
 
-test-suite tests
-  hs-source-dirs: tests
-  main-is: tests.hs
-  Type: exitcode-stdio-1.0
-  build-depends:       base >= 4 && < 5,
-                       calculational == 0.*,
-                       QuickCheck >= 2 && < 3,
-                       test-framework >= 0 && < 1,
-                       test-framework-quickcheck2 >= 0 && < 1, 
-                       containers >= 0 && < 1,
-                       multiset >= 0.2.2 && < 1
-
+test-suite spec
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      CalculationalSpec
+      Paths_calculational
+  hs-source-dirs:
+      tests
+  default-extensions: QuasiQuotes
+  build-depends:
+      QuickCheck
+    , base >=4 && <5
+    , calculational
+    , containers
+    , hspec ==2.*
+    , mtl >=2 && <3
+    , multiset
+    , parsec >=3 && <4
+    , syb >=0 && <1
+    , template-haskell >=2 && <3
+  default-language: Haskell2010
+  build-tool-depends: hspec-discover:hspec-discover == 2.*

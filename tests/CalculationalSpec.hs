@@ -1,14 +1,11 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+module CalculationalSpec where
 
+import Test.Hspec
+import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck
--- import Test.QuickCheck.All
--- import System.Exit (exitSuccess,exitFailure)
-
-import Test.Framework (Test, defaultMain, testGroup)
-import Test.Framework.Providers.QuickCheck2 (testProperty)
-
 
 import Calculational
 import qualified Data.Set as S
@@ -149,65 +146,71 @@ prop_model_mset3 xs = MS.fromList (map (^2)
                                    . filter (\x -> 0 <= x && x <= 10) $ xs)
                           == [calc| {| x <- xs : 0 <= x <= 10 : x^2 |} |]
 
-
--- return []
--- runTests = $(quickCheckAll)
-
--- main :: IO ()
--- main = $(quickCheckAll)
-
 main :: IO ()
-main = defaultMain tests
+main = hspec spec
 
-tests :: [Test]
-tests =
-    [ testGroup "haskell expressions"
-      [ testProperty "dot/dollar/hof" prop_Expr1
-      ]
-    , testGroup "min/max expressions"  
-      [ testProperty "max" prop_Expr2
-      , testProperty "min" prop_Expr3
-      , testProperty "min/max" prop_Expr4
-      , testProperty "add/max" prop_Expr5
-      , testProperty "add/min" prop_Expr6
-      ]
-    , testGroup "union/intersection expressions"  
-      [ testProperty "lists/union/intersect" prop_Expr7
-      , testProperty "lists/intersect/union" prop_Expr8
-      , testProperty "multiset/intersect/union" prop_Expr9
-      , testProperty "multiset/intersect/union" prop_Expr11
-      ]
-    , testGroup "quantifier expressions"  
-      [ testProperty "sum" prop_model_sum1
-      , testProperty "sum/filter" prop_model_sum2
-      , testProperty "prod" prop_model_prod1      
-      , testProperty "prod/filter" prop_model_prod2
-      , testProperty "Max" prop_model_max1
-      , testProperty "Max/filter" prop_model_max2
-      , testProperty "Max/filter/body" prop_model_max3
-      , testProperty "Min" prop_model_min1
-      , testProperty "Min/filter" prop_model_min2
-      , testProperty "Min/filter/body" prop_model_min3
-      ]
-    , testGroup "list expressions"  
-      [ testProperty "range" prop_model_list1
-      , testProperty "range/step" prop_model_list2
-      , testProperty "elem" prop_model_list3
-      , testProperty "sublist" prop_model_list4
-      , testProperty "list/union" prop_model_list5
-      , testProperty "list/Union/quantifier" prop_model_list6
-      , testProperty "list/intersect" prop_model_list7
-      , testProperty "list/intersect/quantifier" prop_model_list8
-      , testProperty "list/empty/intersect/quantifier" prop_model_list9
-      ]
-    , testGroup "set expressions"  
-      [ testProperty "set/range" prop_model_set1
-      , testProperty "set/range/step" prop_model_set2
-      , testProperty "set/comprehension" prop_model_set3
-      ]
-    , testGroup "multiset expressions"  
-      [ testProperty "mset/range" prop_model_mset1
-      , testProperty "mset/range/step" prop_model_mset2
-      , testProperty "mset/comprehension" prop_model_mset3
-      ]
-    ]
+spec :: Spec
+spec = do
+    describe "haskell expressions" $ do
+      prop "dot/dollar/hof" $
+        prop_Expr1
+    describe "min/max expressions" $ do
+      prop "max" $
+        prop_Expr2
+      prop "min" $
+        prop_Expr3
+      prop "min/max" $
+        prop_Expr4
+      prop "add/max" $
+        prop_Expr5
+      prop "add/min" $
+        prop_Expr6
+    describe "union/intersection expressions" $ do
+      prop "lists/union/intersect" $
+        prop_Expr7
+      prop "lists/intersect/union" $
+        prop_Expr8
+      prop "multiset/intersect/union" $
+        prop_Expr9
+      prop "multiset/intersect/union" $
+        prop_Expr11
+    describe "quantifier expressions" $ do
+      prop "sum" $ 
+        prop_model_sum1
+      prop "sum/filter" $ 
+        prop_model_sum2
+      prop "prod" $ 
+        prop_model_prod1      
+      prop "prod/filter" $ 
+        prop_model_prod2
+      prop "Max" $ 
+        prop_model_max1
+      prop "Max/filter" $ 
+        prop_model_max2
+      prop "Max/filter/body" $ 
+        prop_model_max3
+      prop "Min" $ 
+        prop_model_min1
+      prop "Min/filter" $ 
+        prop_model_min2
+      prop "Min/filter/body" $ 
+        prop_model_min3
+    describe "list expressions" $ do
+      prop "range" prop_model_list1
+      prop "range/step" prop_model_list2
+      prop "elem" prop_model_list3
+      prop "sublist" prop_model_list4
+      prop "list/union" prop_model_list5
+      prop "list/Union/quantifier" prop_model_list6
+      prop "list/intersect" prop_model_list7
+      prop "list/intersect/quantifier" prop_model_list8
+      prop "list/empty/intersect/quantifier" prop_model_list9
+    describe "set expressions" $ do
+      prop "set/range" prop_model_set1
+      prop "set/range/step" prop_model_set2
+      prop "set/comprehension" prop_model_set3
+    describe "multiset expressions" $ do
+      prop "mset/range" prop_model_mset1
+      prop "mset/range/step" prop_model_mset2
+      prop "mset/comprehension" prop_model_mset3
+

@@ -17,8 +17,8 @@ module Calculational(
 , Equiv(..)
 , NEquiv(..)
 , Infty(..)
-, Maximum(..)
-, Minimum(..)
+, Max(..)
+, Min(..)
 , Average(..)
 , Universe(..)
 , module Calculational.Definitions 
@@ -29,6 +29,7 @@ module Calculational(
 where
   
 import Data.Monoid
+import Data.Semigroup
 import Calculational.QuasiQuoter
 import Calculational.MonoidExt
 import Calculational.Definitions

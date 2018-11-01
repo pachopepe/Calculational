@@ -28,6 +28,7 @@ import Language.Haskell.TH.Syntax
 import qualified Data.Set as Set
 import qualified Data.MultiSet as MultiSet
 import Data.Monoid
+import Data.Semigroup (Max(..),Min(..))
 import Data.Foldable 
 import Control.Monad
 import Control.Monad.Identity (Identity,runIdentity)
@@ -488,8 +489,8 @@ qSymbols = [ (["forall","/\\","⋀","∀"],([| All |], [| getAll |]))
            , (["#"],([| Sum . sharp |], [| getSum |]))
            , (["∪","⋃","union"],([| Union |], [| getUnion |]))
            , (["∩","⋂","intersection"],([| Intersection |], [| getIntersection |]))
-           , (["↑","max"],([| Maximum |], [| getMaximum |]))
-           , (["↓","min"],([| Minimum |], [| getMinimum |]))
+           , (["↑","max"],([| Max |], [| getMax |]))
+           , (["↓","min"],([| Min |], [| getMin |]))
            , (["avg"],([| Average . (\x -> (Sum x,Sum 1)) |], [| id |]))
            ]
 

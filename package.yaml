@@ -1,0 +1,48 @@
+name: calculational
+version: 0.1.1
+synopsis: Quantifiers, Lists, Sets in a Dijkstra style.
+author: Francisco Chaves
+maintainer: Fancisco Chaves <pachopepe@gmail.com>
+license: MIT
+github: pachopepe/Calculational
+category: Calculational, DSL, Mathematics.
+description: >
+  I implement a Dijkstra style notation for quantifiers,
+  lists, sets and expressions that can be evaluated.
+  The library could reference haskell variables.
+  The expresions are translated using quasiquotes
+  and template-haskell. I used the library to show some
+  concepts of applied logic and discrete math courses for
+  Computer and Systems engineering students.
+tested-with: GHC == 8.4.4
+
+
+dependencies:
+  - base >= 4 && < 5
+  - mtl >= 2 && < 3
+  - parsec >= 3 && < 4
+  - syb >= 0 && < 1
+  - template-haskell >= 2 && < 3
+  - multiset
+  - containers
+
+default-extensions: QuasiQuotes
+
+library:
+  source-dirs: src
+  exposed-modules:
+    - Calculational.MonoidExt
+    - Calculational.Definitions
+    - Calculational
+    
+tests:
+  spec:
+    main: Spec.hs
+    source-dirs: tests
+    dependencies:
+      - hspec == 2.*
+      - QuickCheck
+      - calculational
+    verbatim:
+      build-tool-depends:
+        hspec-discover:hspec-discover == 2.*

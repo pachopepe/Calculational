@@ -20,8 +20,6 @@ module Calculational.MonoidExt
 , Equiv(..)
 , NEquiv(..)
 , Infty(..)
-, Maximum(..)
-, Minimum(..)
 , Average(..)
 , Union (..)
 , Universe (..)
@@ -32,6 +30,7 @@ module Calculational.MonoidExt
 where
 
 import GHC.Exts (Constraint(..))
+import Data.Semigroup
 import Data.Monoid
 import Data.Ratio
 import Control.Applicative as A
@@ -49,13 +48,18 @@ newtype Equiv  = Equiv { getEquiv :: Bool }
 newtype NEquiv  = NEquiv { getNEquiv :: Bool }
                 deriving (Eq, Ord, Read, Show, Bounded)
 
+instance Semigroup Equiv where
+     (Equiv x) <> (Equiv y) = Equiv (x == y)
+     
+
 instance Monoid Equiv where
      mempty = Equiv True
-     (Equiv x) `mappend` (Equiv y) = Equiv (x == y)
+
+instance Semigroup NEquiv where
+     (NEquiv x) <> (NEquiv y) = NEquiv (x /= y)
 
 instance Monoid NEquiv where
      mempty = NEquiv False
-     (NEquiv x) `mappend` (NEquiv y) = NEquiv (x /= y)
 
 -- | The 'bind' operator is the 'foldMap' function swapping
 -- his arguments
@@ -80,9 +84,11 @@ instance (UC m a,UnionClass m a) => UnionClass (Universe m) a where
       Container xs `munion` Container ys = Container (xs `munion` ys)
       _ `munion` _ = Universe
 
+instance (UC m a,UnionClass m a,Semigroup (m a)) => Semigroup (Union (m a)) where
+      s1 <> s2 = Union (getUnion s1 `munion` getUnion s2) 
+
 instance (UC m a,UnionClass m a,Monoid (m a)) => Monoid (Union (m a)) where
       mempty = Union mempty
-      s1 `mappend` s2 = Union (getUnion s1 `munion` getUnion s2) 
 
 instance UnionClass [] a where
       type UC [] a = Eq a
@@ -106,9 +112,11 @@ class IntersectionClass m a where
     type IC m a :: Constraint
     mintersection :: (IC m a) => m a -> m a -> m a -- ^ Intersection overloading function
 
+instance (IC m a,IntersectionClass m a,Bounded (m a),Eq a,Ord a) => Semigroup (Intersection (m a)) where
+      s1 <> s2 = Intersection (getIntersection s1 `mintersection` getIntersection s2) 
+
 instance (IC m a,IntersectionClass m a,Bounded (m a),Eq a,Ord a) => Monoid (Intersection (m a)) where
       mempty = Intersection maxBound
-      s1 `mappend` s2 = Intersection (getIntersection s1 `mintersection` getIntersection s2) 
 
 instance IntersectionClass [] a where
       type IC [] a = Eq a
@@ -128,9 +136,11 @@ instance (IC m a,IntersectionClass m a) => IntersectionClass (Universe m) a wher
       Universe `mintersection` ys = ys
       xs  `mintersection` Universe = xs
 
+instance Semigroup m => Semigroup (Join m) where
+        Join x <> Join y = Join (x <> y)
+
 instance (Monoid m) => Monoid (Join m) where
         mempty = Join mempty
-        Join x `mappend` Join y = Join (x `mappend` y)
 
 -- | Data type wrapper used to bound infinity unbounded data types, 
 -- like integers.
@@ -166,10 +176,12 @@ instance (Alternative m) => Alternative (Universe m) where
     Universe <|> _ = Universe
     _ <|> Universe = Universe
 
+instance (Semigroup (m a)) => Semigroup (Universe m a) where
+    (Container xs) <> (Container ys) = Container (xs <> ys)
+    _ <> _ = Universe
+
 instance (Monoid (m a)) => Monoid (Universe m a) where
     mempty = Container mempty
-    (Container xs) `mappend` (Container ys) = Container (xs `mappend` ys)
-    _ `mappend` _ = Universe
 
 instance (MonadPlus m, Foldable m) => Monad (Universe m) where
     return = Container . return
@@ -185,24 +197,6 @@ instance Foldable m => Foldable (Universe m) where
     foldr f z (Container xs) = F.foldr f z xs
     foldr f z Universe = z
 
--- | Monoid under maximum
--- The type 'a' must be bounded
-newtype Maximum a = Maximum { getMaximum :: a }
-                  deriving (Eq, Ord, Read, Show, Bounded)
-
--- | Monoid under minimum
--- The type 'a' must be bounded
-newtype Minimum a = Minimum { getMinimum :: a }
-                  deriving (Eq, Ord, Read, Show, Bounded)
-
-instance (Bounded a,Ord a) => Monoid (Maximum a) where
-        mempty = Maximum minBound
-        Maximum x `mappend` Maximum y = Maximum (x `max` y)
-
-instance (Bounded a,Ord a) => Monoid (Minimum a) where
-        mempty = Minimum maxBound
-        Minimum x `mappend` Minimum y = Minimum (x `min` y)
-
 -- | The average is not a monoid, but can be modeled as a
 -- monoid maded by pairs of elements of the Sum monoid.
 -- The first element of the pair have the sum of the elements
@@ -210,9 +204,11 @@ instance (Bounded a,Ord a) => Monoid (Minimum a) where
 newtype Average a = Average { getAverage :: (Sum a,Sum a) } 
                   deriving (Read, Show)
 
+instance Num a => Semigroup (Average a) where
+  Average x <> Average y = Average (x <> y)
+  
 instance Num a => Monoid (Average a) where
   mempty = Average (mempty,mempty)
-  Average x `mappend` Average y = Average (x `mappend` y)
 
 -- | @average@ takes the result of a Sum monoid and a Count monoid
 -- and obtains the average dividing both results 
